@@ -12,7 +12,14 @@
         <form>
           <div :class="{on:loginWay}">
             <section class="login_message">
-              <input type="tel" maxlength="11" placeholder="手机号" v-model="phone" name="phone" v-validate="'required||changePhone'"/>
+              <input
+                type="tel"
+                maxlength="11"
+                placeholder="手机号"
+                v-model="phone"
+                name="phone"
+                v-validate="'required||changePhone'"
+              />
               <span style="color:red">{{ errors.first('phone') }}</span>
               <button
                 class="get_verification"
@@ -22,7 +29,14 @@
               >{{computedTime>0?`已发送(${computedTime}s)`:`获取验证码`}}</button>
             </section>
             <section class="login_verification">
-              <input type="tel" maxlength="8" placeholder="验证码" v-model="code" name="code" v-validate="'required'" />
+              <input
+                type="tel"
+                maxlength="8"
+                placeholder="验证码"
+                v-model="code"
+                name="code"
+                v-validate="'required'"
+              />
               <span style="color:red">{{ errors.first('code') }}</span>
             </section>
             <section class="login_hint">
@@ -33,27 +47,56 @@
           <div :class="{on:!loginWay}">
             <section>
               <section class="login_message">
-                <input type="tel" maxlength="11" placeholder="手机/邮箱/用户名" />
+                <input
+                  type="tel"
+                  maxlength="11"
+                  placeholder="手机/邮箱/用户名"
+                  v-model="name"
+                  name="name"
+                  v-validate="'required'"
+                />
+                <span style="color:red">{{ errors.first('name') }}</span>
               </section>
               <section class="login_verification">
-                <input :type="isShowPwd?'text':'password'" maxlength="8" placeholder="密码" />
+                <input
+                  :type="isShowPwd?'text':'password'"
+                  maxlength="8"
+                  placeholder="密码"
+                  v-model="pwd"
+                  name="pwd"
+                  v-validate="'required'"
+                />
+                <span style="color:red">{{ errors.first('pwd') }}</span>
                 <div
-                  class="switch_button off"
+                  class="switch_button"
                   :class="isShowPwd?'on':'off' "
                   @click="isShowPwd=!isShowPwd"
                 >
                   <div class="switch_circle" :class="{run_circle:isShowPwd}"></div>
                   <span class="switch_text">{{isShowPwd?'abc':'...'}}</span>
-                  <!-- 此处滑动时abc并没有被挤压到左边  以后解决 -->
                 </div>
               </section>
               <section class="login_message">
-                <input type="text" maxlength="11" placeholder="验证码" />
-                <img @click="sendCaptcha" ref="im" class="get_verification" src="http://localhost:5000/captcha" alt="captcha" />
+                <input
+                  type="text"
+                  maxlength="11"
+                  placeholder="验证码"
+                  v-model="captcha"
+                  name="captcha"
+                  v-validate="'required'"
+                />
+                <span style="color:red">{{ errors.first('captcha') }}</span>
+                <img
+                  @click="sendCaptcha"
+                  ref="im"
+                  class="get_verification"
+                  src="http://localhost:5000/captcha"
+                  alt="captcha"
+                />
               </section>
             </section>
           </div>
-          <button class="login_submit">登录</button>
+          <button class="login_submit" @click.prevent="login">登录</button>
         </form>
         <a href="javascript:;" class="about_us">关于我们</a>
       </div>
@@ -64,6 +107,10 @@
   </section>
 </template>
 <script>
+// 引入获取短信验证码接口
+import { reqSendCode , reqSmsLogin } from "../../api";
+// 引入登录成功或者失败的提示和弹窗
+import { Toast , MessageBox } from 'mint-ui';
 export default {
   name: "Login",
   data() {
@@ -72,10 +119,10 @@ export default {
       phone: "", // 手机号
       computedTime: 0, //获取验证码倒计时
       isShowPwd: false, //默认显示密码为隐藏样式
-      code:'', //验证码
-      name:'',//用户名
-      pwd:'',//密码
-      capcha:'',//图形验证码
+      code: "", //验证码
+      name: "", //用户名
+      pwd: "", //密码
+      captcha: "" //图形验证码
     };
   },
   computed: {
@@ -86,22 +133,36 @@ export default {
   },
   methods: {
     //发送验证码
-    sendCode() {
-      this.computedTime = 10;
+    async sendCode() {
+      this.computedTime = 10
       this.timeId = setInterval(() => {
-        console.log("1");
-        this.computedTime--;
+        this.computedTime--
         if (this.computedTime <= 0) {
-          //还原为默认值
-          this.computedTime = 0;
-          //清理计时器
-          clearInterval(this.timeId);
+          // 还原为默认值
+          this.computedTime = 0
+          // 清理定时器
+          clearInterval(this.timeId)
         }
-      }, 1000);
+      }, 1000)
+
+      // 调用接口发送验证码----成功或者失败
+      const result = await reqSendCode(this.phone)
+      if (result.code === 0) {
+        // 成功
+        Toast('发送成功')
+      } else {
+        // 失败
+        MessageBox.alert('发送失败', '提示')
+        this.computedTime = 0
+      }
     },
     //获取图形验证码
-    sendCaptcha(){
-      this.$refs.im.src='http://localhost:5000/captcha?time='+Date.now()
+    sendCaptcha() {
+      this.$refs.im.src = "http://localhost:5000/captcha?time=" + Date.now();
+    },
+    // 登录操作
+    login() {
+      // this.$validator.validateAll(); 表单整体校验
     }
   }
 };
