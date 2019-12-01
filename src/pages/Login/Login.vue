@@ -4,40 +4,52 @@
       <div class="login_header">
         <h2 class="login_logo">硅谷外卖</h2>
         <div class="login_header_title">
-          <a href="javascript:;" class="on">短信登录</a>
-          <a href="javascript:;">密码登录</a>
+          <a href="javascript:;" :class="{on:loginWay}" @click="loginWay=true">短信登录</a>
+          <a href="javascript:;" :class="{on:!loginWay}" @click="loginWay=false">密码登录</a>
         </div>
       </div>
       <div class="login_content">
         <form>
-          <div class="on">
+          <div :class="{on:loginWay}">
             <section class="login_message">
-              <input type="tel" maxlength="11" placeholder="手机号" />
-              <button disabled="disabled" class="get_verification">获取验证码</button>
+              <input type="tel" maxlength="11" placeholder="手机号" v-model="phone" name="phone" v-validate="'required||changePhone'"/>
+              <span style="color:red">{{ errors.first('phone') }}</span>
+              <button
+                class="get_verification"
+                :disabled="!isRightPhone||computedTime>0"
+                :class="{right:isRightPhone}"
+                @click.prevent="sendCode"
+              >{{computedTime>0?`已发送(${computedTime}s)`:`获取验证码`}}</button>
             </section>
             <section class="login_verification">
-              <input type="tel" maxlength="8" placeholder="验证码" />
+              <input type="tel" maxlength="8" placeholder="验证码" v-model="code" name="code" v-validate="'required'" />
+              <span style="color:red">{{ errors.first('code') }}</span>
             </section>
             <section class="login_hint">
               温馨提示：未注册硅谷外卖帐号的手机号，登录时将自动注册，且代表已同意
               <a href="javascript:;">《用户服务协议》</a>
             </section>
           </div>
-          <div>
+          <div :class="{on:!loginWay}">
             <section>
               <section class="login_message">
                 <input type="tel" maxlength="11" placeholder="手机/邮箱/用户名" />
               </section>
               <section class="login_verification">
-                <input type="tel" maxlength="8" placeholder="密码" />
-                <div class="switch_button off">
-                  <div class="switch_circle"></div>
-                  <span class="switch_text">...</span>
+                <input :type="isShowPwd?'text':'password'" maxlength="8" placeholder="密码" />
+                <div
+                  class="switch_button off"
+                  :class="isShowPwd?'on':'off' "
+                  @click="isShowPwd=!isShowPwd"
+                >
+                  <div class="switch_circle" :class="{run_circle:isShowPwd}"></div>
+                  <span class="switch_text">{{isShowPwd?'abc':'...'}}</span>
+                  <!-- 此处滑动时abc并没有被挤压到左边  以后解决 -->
                 </div>
               </section>
               <section class="login_message">
                 <input type="text" maxlength="11" placeholder="验证码" />
-                <img class="get_verification" src="./images/captcha.svg" alt="captcha" />
+                <img @click="sendCaptcha" ref="im" class="get_verification" src="http://localhost:5000/captcha" alt="captcha" />
               </section>
             </section>
           </div>
@@ -52,7 +64,47 @@
   </section>
 </template>
 <script>
-export default {}
+export default {
+  name: "Login",
+  data() {
+    return {
+      loginWay: true, // 默认值是true, true代表手机登录
+      phone: "", // 手机号
+      computedTime: 0, //获取验证码倒计时
+      isShowPwd: false, //默认显示密码为隐藏样式
+      code:'', //验证码
+      name:'',//用户名
+      pwd:'',//密码
+      capcha:'',//图形验证码
+    };
+  },
+  computed: {
+    isRightPhone() {
+      //手机号码
+      return /[1]\d[10]/.test(this.phone);
+    }
+  },
+  methods: {
+    //发送验证码
+    sendCode() {
+      this.computedTime = 10;
+      this.timeId = setInterval(() => {
+        console.log("1");
+        this.computedTime--;
+        if (this.computedTime <= 0) {
+          //还原为默认值
+          this.computedTime = 0;
+          //清理计时器
+          clearInterval(this.timeId);
+        }
+      }, 1000);
+    },
+    //获取图形验证码
+    sendCaptcha(){
+      this.$refs.im.src='http://localhost:5000/captcha?time='+Date.now()
+    }
+  }
+};
 </script>
 <style lang="stylus" rel="stylesheet/stylus">
 .loginContainer
@@ -114,6 +166,8 @@ export default {}
               color #ccc
               font-size 14px
               background transparent
+              &.right
+                color black
           .login_verification
             position relative
             margin-top 16px
@@ -153,6 +207,8 @@ export default {}
                 background #fff
                 box-shadow 0 2px 4px 0 rgba(0, 0, 0, 0.1)
                 transition transform 0.3s
+                &.run_circle
+                  transform translateX(27px)
           .login_hint
             margin-top 12px
             color #999
